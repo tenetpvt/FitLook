@@ -1,0 +1,16 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Hanger shape - fashion/clothing icon -->
+    <path
+        android:fillColor="#E8A87C"
+        android:pathData="M12,2C12.55,2 13,2.45 13,3V3.09C15.84,3.56 18,6.03 18,9H19C19.55,9 20,9.45 20,10C20,10.55 19.55,11 19,11H5C4.45,11 4,10.55 4,10C4,9.45 4.45,9 5,9H6C6,6.03 8.16,3.56 11,3.09V3C11,2.45 11.45,2 12,2ZM12,5C9.79,5 8,6.79 8,9H16C16,6.79 14.21,5 12,5Z" />
+    <path
+        android:fillColor="#E8A87C"
+        android:pathData="M4,13H20C20.55,13 21,13.45 21,14C21,14.55 20.55,15 20,15H4C3.45,15 3,14.55 3,14C3,13.45 3.45,13 4,13Z" />
+    <path
+        android:fillColor="#D85A7F"
+        android:pathData="M6,17H18C18.55,17 19,17.45 19,18V20C19,21.1 18.1,22 17,22H7C5.9,22 5,21.1 5,20V18C5,17.45 5.45,17 6,17Z" />
+</vector>
