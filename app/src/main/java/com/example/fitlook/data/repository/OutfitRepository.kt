@@ -82,7 +82,26 @@ class OutfitRepository {
 
     suspend fun deleteOutfit(outfitId: String): Boolean {
         return try {
+            // Fetch the outfit first to get its imageUrl for storage cleanup
+            val doc = outfitsCollection.document(outfitId).get().await()
+            val imageUrl = doc.getString("imageUrl") ?: ""
+
+            // Delete from Firestore
             outfitsCollection.document(outfitId).delete().await()
+
+            // Delete associated image from Cloud Storage (if it's a Firebase URL)
+            if (imageUrl.contains("firebasestorage.googleapis.com") ||
+                imageUrl.contains("storage.googleapis.com")) {
+                try {
+                    com.google.firebase.storage.FirebaseStorage.getInstance()
+                        .getReferenceFromUrl(imageUrl)
+                        .delete()
+                        .await()
+                } catch (e: Exception) {
+                    // Image deletion is best-effort; don't fail the outfit deletion
+                    android.util.Log.w("OutfitRepository", "Failed to delete storage image: ${e.message}")
+                }
+            }
             true
         } catch (e: Exception) {
             false

@@ -51,23 +51,27 @@ object GeminiService {
     }
 
     /**
-     * Generates outfit title, description, and category from an image URL.
+     * Scales a bitmap so its largest dimension is at most [maxDim] pixels.
+     * Prevents OOM when sending large camera captures to Gemini.
      */
-    suspend fun generateOutfitInfo(imageUrl: String): Result<GeneratedOutfitInfo> {
+    private fun ensureMaxDimension(bitmap: Bitmap, maxDim: Int = 1024): Bitmap {
+        return if (bitmap.width > maxDim || bitmap.height > maxDim) {
+            val scale = maxDim.toFloat() / maxOf(bitmap.width, bitmap.height)
+            Bitmap.createScaledBitmap(
+                bitmap,
+                (bitmap.width * scale).toInt(),
+                (bitmap.height * scale).toInt(),
+                true
+            )
+        } else bitmap
+    }
+
+    /**
+     * Core AI analysis: sends a scaled bitmap to Gemini and parses the structured response.
+     */
+    private suspend fun analyzeImage(bitmap: Bitmap): Result<GeneratedOutfitInfo> {
         return try {
-            val bitmap = downloadImage(imageUrl)
-                ?: return Result.failure(Exception("Could not download image. Check the URL."))
-
-            val scaledBitmap = if (bitmap.width > 1024 || bitmap.height > 1024) {
-                val scale = 1024f / maxOf(bitmap.width, bitmap.height)
-                Bitmap.createScaledBitmap(
-                    bitmap,
-                    (bitmap.width * scale).toInt(),
-                    (bitmap.height * scale).toInt(),
-                    true
-                )
-            } else bitmap
-
+            val scaledBitmap = ensureMaxDimension(bitmap)
             val categoriesStr = CATEGORIES.joinToString(", ")
 
             val prompt = """
@@ -76,7 +80,7 @@ object GeminiService {
                 Look at this outfit image and generate:
                 1. A catchy, short TITLE (max 5 words) for this outfit.
                 2. A compelling DESCRIPTION (2-3 sentences) describing the outfit, its vibe, and when to wear it.
-                3. A CATEGORY — pick ONE from: $categoriesStr
+                3. A CATEGORY — pick ONE from: ${'$'}categoriesStr
                 
                 Respond in EXACTLY this format (no extra text, no markdown):
                 TITLE: <your title here>
@@ -92,7 +96,7 @@ object GeminiService {
             )
 
             val text = response.text
-            Log.d(TAG, "Gemini response: $text")
+            Log.d(TAG, "Gemini response: ${'$'}text")
 
             if (text == null) {
                 return Result.failure(Exception("Gemini returned empty response"))
@@ -112,7 +116,24 @@ object GeminiService {
             Result.success(GeneratedOutfitInfo(title, description, validCategory))
         } catch (e: Exception) {
             Log.e(TAG, "Gemini error", e)
-            Result.failure(Exception("AI error: ${e.message}"))
+            Result.failure(Exception("AI error: ${'$'}{e.message}"))
         }
+    }
+
+    /**
+     * Generates outfit info from an image URL (legacy flow — downloads then analyzes).
+     */
+    suspend fun generateOutfitInfo(imageUrl: String): Result<GeneratedOutfitInfo> {
+        val bitmap = downloadImage(imageUrl)
+            ?: return Result.failure(Exception("Could not download image. Check the URL."))
+        return analyzeImage(bitmap)
+    }
+
+    /**
+     * Generates outfit info from a local Bitmap (new flow — instant local analysis).
+     * Massive UX win: no need to wait for upload before getting AI tags.
+     */
+    suspend fun generateOutfitInfo(bitmap: Bitmap): Result<GeneratedOutfitInfo> {
+        return analyzeImage(bitmap)
     }
 }
